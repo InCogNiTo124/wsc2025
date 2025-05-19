@@ -1,0 +1,112 @@
+services:
+  triton:
+    image: nvcr.io/nvidia/tritonserver:25.06-trtllm-python-py3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.triton-router.entrypoints=web"
+      - "traefik.http.routers.triton-router.rule=PathPrefix(`/triton/`)"
+      - "traefik.http.routers.triton-router.middlewares=triton-path-rewrite@docker"
+      - "traefik.http.middlewares.triton-path-rewrite.replacepathregex.regex=^/triton/(.+)"
+      - "traefik.http.middlewares.triton-path-rewrite.replacepathregex.replacement=/v2/models/$${1}/generate"
+      - "traefik.http.services.triton-service.loadbalancer.server.port=8000"
+    volumes:
+      - "./:/wsc2025"
+    command:
+      - tritonserver
+      - --model-repository=/wsc2025/model_repository
+      - --model-control-mode=explicit
+      - --load-model=preprocessing
+      - --load-model=gemma_torch
+      - --load-model=tensorrt_llm
+      - --load-model=postprocessing
+      - --load-model=ensemble_torch
+      - --load-model=ensemble_trt
+      - --log-verbose=2
+    ports:
+      - "8000"
+      - "8001"
+      - "8002"
+    # GPU access boilerplate
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all # Allocate all available GPUs
+              capabilities:
+              - gpu
+    healthcheck:
+      test: "curl 127.0.0.1:8000/v2/health/ready"
+      interval: 5s
+      timeout: 15s
+      retries: 10
+      start_period: 40s
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    volumes:
+      - ./prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --web.enable-remote-write-receiver
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    ports:
+      - "9090:9090" # Expose Prometheus web UI
+    depends_on:
+      triton:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", http://localhost:9090"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana-router.entrypoints=web"
+      - "traefik.http.routers.grafana-router.rule=PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana-router.middlewares=grafana-path-rewrite@docker"
+      - "traefik.http.middlewares.grafana-path-rewrite.replacepathregex.regex=^/grafana(?:/|$)(.*)"
+      - "traefik.http.middlewares.grafana-path-rewrite.replacepathregex.replacement=/$$1"
+      - "traefik.http.services.grafana-service.loadbalancer.server.port=3000"
+    environment:
+      - GF_SERVER_ROOT_URL=http://${local_ip}:8000/grafana
+      - GF_SERVER_PROTOCOL=http # Explicitly set protocol if behind an HTTP-only proxy
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/dashboard.json
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/ # Mount provisioning files for datasources/dashboards
+
+    healthcheck:
+      test: "curl -v 127.0.0.1:3000/api/health"
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 40s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  traefik:
+    image: traefik:v3.4.1
+    depends_on:
+      triton:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --entrypoints.web.address=:8000
+      - --log.level=DEBUG
+    ports:
+      - "8000:8000"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"

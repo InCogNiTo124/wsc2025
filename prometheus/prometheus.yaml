@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 5s # Set the scrape interval to every 5 seconds.
+  evaluation_interval: 5s # Evaluate rules every 5 seconds.
+
+scrape_configs:
+  - job_name: 'triton'
+    # metrics_path defaults to /metrics
+    # scheme defaults to http.
+    static_configs:
+      - targets: ['triton:8002'] # Scrape the 'triton' service on port 8002

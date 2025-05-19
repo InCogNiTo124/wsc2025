@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090 # Connects to the 'prometheus' service on its internal port
+    access: proxy
+    isDefault: true
+    version: 1
+    editable: false
+    uid: cepr5k66zwruoe
