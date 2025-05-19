@@ -1,4 +1,4 @@
-name: "ensemble_torch"
+name: "ensemble_trt"
 platform: "ensemble"
 
 input {
@@ -6,11 +6,27 @@ input {
   data_type: TYPE_STRING
   dims: [ 1 ]
 }
+input {
+  name: "request_output_len"
+  data_type: TYPE_INT32
+  dims: [ 1 ]
+}
+input {
+  name: "end_id"
+  data_type: TYPE_INT32
+  dims: [ 1 ]
+  optional: true
+}
 
 output {
   name: "output"
   data_type: TYPE_STRING
   dims: [ -1 ]
+}
+output {
+  name: "sequence_length"
+  data_type: TYPE_INT32
+  dims: [ 1 ]
 }
 
 ensemble_scheduling {
@@ -18,10 +34,12 @@ ensemble_scheduling {
   step {
     model_name: "preprocessing"
     model_version: -1
+
     input_map {
       key: "prompt"
       value: "prompt"
     }
+
     output_map {
       key: "token_ids"
       value: "input_token_ids"
@@ -29,25 +47,41 @@ ensemble_scheduling {
   }
 
   step {
-    model_name: "gemma_torch"
+    model_name: "tensorrt_llm"
     model_version: -1
+
     input_map {
-      key: "input_token_ids"
+      key: "input_ids"
       value: "input_token_ids"
     }
+    input_map {
+      key: "request_output_len"
+      value: "request_output_len"
+    }
+    input_map {
+      key: "end_id"
+      value: "end_id"
+    }
+
     output_map {
-      key: "output_token_ids"
+      key: "output_ids"
       value: "output_token_ids"
     }
+    output_map {
+      key: "sequence_length"
+      value: "sequence_length"
     }
-  
+  }
+    
   step {
     model_name: "postprocessing"
     model_version: -1
+
     input_map {
       key: "token_ids"
       value: "output_token_ids"
     }
+
     output_map {
       key: "decoded_text"
       value: "output"
