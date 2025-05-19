@@ -1,15 +1,22 @@
 name: "preprocessing"
 backend: "python"
 
-# add inputs and outputs
-input {}
+input {
+  name: "prompt"
+  data_type: TYPE_STRING
+  dims: [ 1 ]
+}
 
-output {}
+output {
+  name: "token_ids"
+  data_type: TYPE_INT32
+  dims: [ -1 ]
+}
 
 parameters {
   key: "tokenizer_dir"
   value: {
-    string_value: "${tokenizer_dir}"
+    string_value: "/wsc2025/checkpoints/google/gemma-3-1b-it/"
   }
 }
 

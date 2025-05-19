@@ -1,8 +1,14 @@
 default:
   just --list
 
+run-triton-postprocessing:
+  docker container run -it --rm --gpus all -v $(pwd):/wsc2025 -p 8000-8002:8000-8002 -e PYTHONDONTWRITEBYTECODE=1 nvcr.io/nvidia/tritonserver:25.06-trtllm-python-py3 tritonserver --model-repository /wsc2025/model_repository --model-control-mode explicit --load-model=postprocessing --log-verbose 2
+
 run-triton-preprocessing:
   docker container run -it --rm --gpus all -v $(pwd):/wsc2025 -p 8000-8002:8000-8002 -e PYTHONDONTWRITEBYTECODE=1 nvcr.io/nvidia/tritonserver:25.06-trtllm-python-py3 tritonserver --model-repository /wsc2025/model_repository --model-control-mode explicit --load-model=preprocessing --log-verbose 2
+
+probe-triton-postprocessing:
+  curl -X POST localhost:8000/v2/models/postprocessing/generate --json '{"token_ids": [2,105,2364,107,3689,563,236743,236778,236884,236832,236772,236778,236884,236778,236881,106,107,105,4368,107]}'
 
 probe-triton-preprocessing:
   curl -X POST localhost:8000/v2/models/preprocessing/generate --json '{"prompt": "What is 2^7-2^2?"}'

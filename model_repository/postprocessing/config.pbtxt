@@ -1,0 +1,19 @@
+name: "postprocessing"
+backend: "python"
+
+# define inputs and outputs
+input {}
+
+output {}
+
+parameters {
+  key: "tokenizer_dir"
+  value: {
+    string_value: "${tokenizer_dir}"
+  }
+}
+
+instance_group {
+  count: 1
+  kind: KIND_CPU
+}
