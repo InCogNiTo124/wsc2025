@@ -1,15 +1,23 @@
 name: "postprocessing"
 backend: "python"
 
-# define inputs and outputs
-input {}
+input {
+  name: "token_ids"
+  data_type: TYPE_INT32
+  dims: [ 1, 1, -1]
+  reshape: { shape: [ -1 ] }
+}
 
-output {}
+output {
+  name: "decoded_text"
+  data_type: TYPE_STRING
+  dims: [ 1 ]
+}
 
 parameters {
   key: "tokenizer_dir"
   value: {
-    string_value: "${tokenizer_dir}"
+    string_value: "/wsc2025/checkpoints/google/gemma-3-1b-it/"
   }
 }
 
@@ -17,3 +25,4 @@ instance_group {
   count: 1
   kind: KIND_CPU
 }
+

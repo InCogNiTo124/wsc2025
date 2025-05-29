@@ -13,23 +13,20 @@ class TritonPythonModel:
         model_config = json.loads(args["model_config"])
         tokenizer_dir = model_config["parameters"]["tokenizer_dir"]["string_value"]
 
-        # 1. load tokenizer
-        self.tokenizer = ...
+        self.tokenizer = GemmaTokenizer.from_pretrained(tokenizer_dir)
         return
 
     def execute(self, requests):
         responses = []
         for request in requests:
             token_ids_tensor = pb_utils.get_input_tensor_by_name(
-                request, "INPUT_NAME"
-            ).as_numpy()
+                request, "token_ids"
+            ).as_numpy()  # shape(-1)
 
-            ### YOUR CODE HERE
-
-            decoded_text = ...
+            decoded_text = self.tokenizer.decode(token_ids_tensor)
 
             output_tensor = pb_utils.Tensor(
-                "OUTPUT_NAME", np.array(decoded_text, dtype=object)
+                "decoded_text", np.array(decoded_text, dtype=object)
             )
             response = pb_utils.InferenceResponse([output_tensor])
             responses.append(response)
