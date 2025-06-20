@@ -18,25 +18,33 @@ class TritonPythonModel:
         model_config = json.loads(args["model_config"])
         model_dir = model_config["parameters"]["model_dir"]["string_value"]
 
-        self.model = ...
+        self.model = (
+            Gemma3ForCausalLM.from_pretrained(model_dir, device_map=DEVICE)
+            .bfloat16()
+            .eval()
+        )
+        self.model.generation_config.max_new_tokens = 256
+
         return
 
     def execute(self, requests):
         responses = []
         for request in requests:
             input_token_ids_tensor = pb_utils.get_input_tensor_by_name(
-                request, "INPUT_NAME"
+                request, "input_token_ids"
             ).as_numpy()
 
-            ### YOUR CODE HERE ###
+            input_token_ids_torch = torch.tensor(
+                [input_token_ids_tensor], device=DEVICE
+            )
 
-            input_token_ids_torch = ...
+            output_token_ids = self.model.generate(input_token_ids_torch).cpu().numpy()
 
-            output_token_ids = ...
+            output_tokens_tensor = pb_utils.Tensor(
+                "output_token_ids", output_token_ids.astype(np.int32).reshape(1, 1, -1)
+            )
 
-            output_tensor = pb_utils.Tensor("OUTPUT_NAME", ...)
-
-            response = pb_utils.InferenceResponse([output_tensor])
+            response = pb_utils.InferenceResponse([output_tokens_tensor])
 
             responses.append(response)
         return responses

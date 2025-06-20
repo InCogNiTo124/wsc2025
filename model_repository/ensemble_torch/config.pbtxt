@@ -1,0 +1,37 @@
+name: "ensemble_torch"
+platform: "ensemble"
+
+input {}
+
+output {}
+
+ensemble_scheduling {
+
+  step {
+    model_name: "preprocessing"
+    model_version: -1
+
+    input_map {}
+
+    output_map {}
+  }
+
+  step {
+    model_name: "gemma_torch"
+    model_version: -1
+
+    input_map {}
+
+    output_map {}
+  }
+  
+  step {
+    model_name: "postprocessing"
+    model_version: -1
+    
+    input_map {}
+
+    output_map {}
+  }
+
+}

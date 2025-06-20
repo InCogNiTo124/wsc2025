@@ -1,6 +1,9 @@
 default:
   just --list
 
+run-triton-ensemble-torch:
+  docker container run -it --rm --gpus all -v $(pwd):/wsc2025 -p 8000-8002:8000-8002 -e PYTHONDONTWRITEBYTECODE=1 nvcr.io/nvidia/tritonserver:25.06-trtllm-python-py3 tritonserver --model-repository /wsc2025/model_repository --model-control-mode explicit --load-model=preprocessing --load-model=gemma_torch --load-model=postprocessing --load-model=ensemble_torch --log-verbose 2
+
 run-triton-gemma:
   docker container run -it --rm --gpus all -v $(pwd):/wsc2025 -p 8000-8002:8000-8002 -e PYTHONDONTWRITEBYTECODE=1 nvcr.io/nvidia/tritonserver:25.06-trtllm-python-py3 tritonserver --model-repository /wsc2025/model_repository --model-control-mode explicit --load-model=gemma_torch --log-verbose 2
 
@@ -9,6 +12,9 @@ run-triton-postprocessing:
 
 run-triton-preprocessing:
   docker container run -it --rm --gpus all -v $(pwd):/wsc2025 -p 8000-8002:8000-8002 -e PYTHONDONTWRITEBYTECODE=1 nvcr.io/nvidia/tritonserver:25.06-trtllm-python-py3 tritonserver --model-repository /wsc2025/model_repository --model-control-mode explicit --load-model=preprocessing --log-verbose 2
+
+probe-triton-ensemble-torch:
+  curl -X POST localhost:8000/v2/models/ensemble_torch/generate --json '{"prompt": "What is 2^7-2^2?"}'
 
 probe-triton-gemma:
   curl -X POST localhost:8000/v2/models/gemma_torch/generate --json '{"input_token_ids": [2,105,2364,107,3689,563,236743,236778,236884,236832,236772,236778,236884,236778,236881,106,107,105,4368,107]}'
